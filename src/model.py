@@ -49,6 +49,9 @@ def create_mamba_config(model_config: MambaModelConfig) -> MambaConfig:
         # Initialization
         initializer_range=model_config.initializer_range,
         tie_word_embeddings=model_config.tie_word_embeddings,
+
+        # Disable cache to avoid DataParallel issues during evaluation
+        use_cache=False,
     )
 
     logger.info(f"MAMBA config created: {config}")

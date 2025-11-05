@@ -1,6 +1,7 @@
 """Main Training Script for MAMBA-130M on WikiText-103"""
 
 import argparse
+import csv
 import logging
 import os
 import sys
@@ -11,6 +12,7 @@ import transformers
 from transformers import (
     Trainer,
     TrainingArguments,
+    TrainerCallback,
     EarlyStoppingCallback,
     set_seed,
 )
@@ -33,6 +35,73 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
+
+class CSVMetricsCallback(TrainerCallback):
+    """Custom callback to save training and validation metrics to CSV file"""
+
+    def __init__(self, output_dir: str, log_every_n_steps: int = 1):
+        """
+        Args:
+            output_dir: Directory to save the CSV file
+            log_every_n_steps: Log metrics every N training steps (default: 1)
+        """
+        self.output_dir = output_dir
+        self.log_every_n_steps = log_every_n_steps
+        self.csv_file = Path(output_dir) / "training_metrics.csv"
+        self.csv_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Initialize CSV file with headers
+        with open(self.csv_file, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                'step', 'epoch', 'train_loss', 'learning_rate',
+                'eval_loss', 'eval_perplexity', 'timestamp'
+            ])
+
+        logger.info(f"CSV metrics logging enabled: {self.csv_file}")
+        logger.info(f"Logging every {log_every_n_steps} steps")
+
+    def on_log(self, args, state, control, logs=None, **kwargs):
+        """Called when logging occurs (every logging_steps)"""
+        if logs is None:
+            return
+
+        # Only log at specified intervals
+        if state.global_step % self.log_every_n_steps != 0:
+            return
+
+        # Prepare row data
+        row = {
+            'step': state.global_step,
+            'epoch': logs.get('epoch', ''),
+            'train_loss': logs.get('loss', ''),
+            'learning_rate': logs.get('learning_rate', ''),
+            'eval_loss': logs.get('eval_loss', ''),
+            'eval_perplexity': '',
+            'timestamp': ''
+        }
+
+        # Calculate perplexity if eval_loss is available
+        if 'eval_loss' in logs and logs['eval_loss']:
+            try:
+                import math
+                row['eval_perplexity'] = math.exp(logs['eval_loss'])
+            except:
+                pass
+
+        # Add timestamp
+        from datetime import datetime
+        row['timestamp'] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Append to CSV
+        with open(self.csv_file, 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                row['step'], row['epoch'], row['train_loss'],
+                row['learning_rate'], row['eval_loss'],
+                row['eval_perplexity'], row['timestamp']
+            ])
 
 
 def setup_wandb(config: ExperimentConfig):
@@ -168,10 +237,6 @@ def create_training_arguments(config: ExperimentConfig) -> TrainingArguments:
         logging_first_step=training_config.logging_first_step,
         report_to=training_config.report_to if config.use_wandb else ["tensorboard"],
 
-        # Distributed training
-        ddp_backend=training_config.ddp_backend,
-        ddp_find_unused_parameters=training_config.ddp_find_unused_parameters,
-
         # Reproducibility
         seed=training_config.seed,
         data_seed=training_config.data_seed,
@@ -267,6 +332,13 @@ def train(config: ExperimentConfig, resume_from_checkpoint: bool = False):
 
     # Setup callbacks
     callbacks = []
+
+    # CSV metrics logging
+    csv_callback = CSVMetricsCallback(
+        output_dir=config.training.output_dir,
+        log_every_n_steps=config.training.logging_steps  # Log at same frequency as regular logging
+    )
+    callbacks.append(csv_callback)
 
     # Early stopping
     if config.training.early_stopping_patience > 0:

@@ -10,13 +10,14 @@ dependencies = [
     "datasets>=2.14.0",
     "accelerate>=0.24.0",
     "wandb>=0.16.0",
-    "causal-conv1d>=1.4.0",
     "mamba-ssm>=2.2.0",
     "evaluate>=0.4.0",
     "tensorboard>=2.14.0",
     "scikit-learn>=1.3.0",
     "pyyaml>=6.0",
     "tqdm>=4.66.0",
+    "setuptools>=80.9.0",
+    "numpy>=2.3.4",
 ]
 
 [project.optional-dependencies]
@@ -27,5 +28,6 @@ dev = [
 ]
 
 [build-system]
-requires = ["setuptools>=68.0.0", "wheel"]
+requires = ["setuptools>=68.0.0", "wheel", "torch"]
 build-backend = "setuptools.build_meta"
+

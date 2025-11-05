@@ -64,13 +64,13 @@ training:
   logging_dir: "./logs"
 
   # Training duration
-  num_train_epochs: 5
+  num_train_epochs: 3
   max_steps: -1  # -1 means use num_train_epochs
 
   # Batch size and accumulation
-  per_device_train_batch_size: 4
-  per_device_eval_batch_size: 4
-  gradient_accumulation_steps: 8  # Effective batch size = 32
+  per_device_train_batch_size: 16
+  per_device_eval_batch_size: 16
+  gradient_accumulation_steps: 2  # Effective batch size = 32
 
   # Optimization
   learning_rate: 5.0e-4  # 5e-4
@@ -109,7 +109,6 @@ training:
   logging_first_step: true
   report_to:
     - "tensorboard"
-    - "wandb"
 
   # Distributed training
   ddp_backend: "nccl"
@@ -146,5 +145,5 @@ wandb:
   watch_model: false
 
 # Experiment Flags
-use_wandb: true
+use_wandb: false
 train_from_scratch: true  # true = random initialization, false = load pretrained
