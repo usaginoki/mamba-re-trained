@@ -1,0 +1,1 @@
+step,epoch,train_loss,learning_rate,eval_loss,eval_perplexity,timestamp

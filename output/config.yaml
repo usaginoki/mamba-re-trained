@@ -1,0 +1,87 @@
+model:
+  d_model: 768
+  n_layer: 24
+  vocab_size: 50280
+  d_state: 16
+  d_conv: 4
+  expand: 2
+  dt_rank: auto
+  conv_bias: true
+  bias: false
+  use_fast_path: true
+  residual_in_fp32: true
+  fused_add_norm: true
+  rms_norm: true
+  pad_token_id: 0
+  bos_token_id: 0
+  eos_token_id: 0
+  initializer_range: 0.02
+  tie_word_embeddings: false
+data:
+  dataset_name: Salesforce/wikitext
+  dataset_config: wikitext-103-raw-v1
+  max_seq_length: 512
+  preprocessing_num_workers: 2
+  train_batch_size: 2
+  eval_batch_size: 2
+  dataloader_num_workers: 2
+  tokenizer_name: state-spaces/mamba-130m-hf
+  cache_dir: null
+  overwrite_cache: false
+training:
+  output_dir: ./output
+  run_name: test-run
+  logging_dir: ./logs
+  num_train_epochs: 1
+  max_steps: 20
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 1
+  learning_rate: 0.0005
+  weight_decay: 0.1
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_epsilon: 1.0e-08
+  max_grad_norm: 1.0
+  lr_scheduler_type: cosine
+  warmup_steps: 5
+  warmup_ratio: 0.0
+  fp16: false
+  bf16: true
+  fp16_full_eval: false
+  gradient_checkpointing: false
+  optim: adamw_torch
+  eval_strategy: steps
+  eval_steps: 10
+  save_strategy: steps
+  save_steps: 10
+  save_total_limit: 2
+  load_best_model_at_end: true
+  metric_for_best_model: eval_loss
+  greater_is_better: false
+  logging_steps: 5
+  logging_first_step: true
+  report_to:
+  - tensorboard
+  ddp_backend: nccl
+  ddp_find_unused_parameters: false
+  seed: 42
+  data_seed: 42
+  remove_unused_columns: false
+  label_names:
+  - labels
+  include_inputs_for_metrics: false
+  resume_from_checkpoint: null
+  early_stopping_patience: 0
+  early_stopping_threshold: 0.0
+wandb:
+  project: mamba-local-parquet
+  entity: null
+  name: null
+  tags:
+  - test
+  notes: Quick test run
+  log_model: false
+  watch_model: false
+use_wandb: false
+train_from_scratch: true

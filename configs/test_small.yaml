@@ -1,0 +1,125 @@
+# Test Configuration for Quick End-to-End Testing
+# Uses small dataset and minimal training steps
+
+# Model Architecture Configuration (same as full config)
+model:
+  d_model: 768
+  n_layer: 24
+  vocab_size: 50280
+  d_state: 16
+  d_conv: 4
+  expand: 2
+  dt_rank: "auto"
+  conv_bias: true
+  bias: false
+  use_fast_path: true
+  residual_in_fp32: true
+  fused_add_norm: true
+  rms_norm: true
+  pad_token_id: 0
+  bos_token_id: 0
+  eos_token_id: 0
+  initializer_range: 0.02
+  tie_word_embeddings: false
+
+# Dataset Configuration
+data:
+  dataset_name: "Salesforce/wikitext"
+  dataset_config: "wikitext-103-raw-v1"
+  max_seq_length: 512  # Reduced for faster processing
+  preprocessing_num_workers: 2
+  train_batch_size: 2
+  eval_batch_size: 2
+  dataloader_num_workers: 2
+  tokenizer_name: "state-spaces/mamba-130m-hf"
+  cache_dir: null
+  overwrite_cache: false
+
+# Training Configuration - MINIMAL FOR TESTING
+training:
+  output_dir: "./outputs/test-run"
+  run_name: "test-run"
+  logging_dir: "./logs"
+
+  # Training duration - VERY SHORT FOR TESTING
+  num_train_epochs: 1
+  max_steps: 20  # Only 20 steps for quick test
+
+  # Batch size - SMALL FOR TESTING
+  per_device_train_batch_size: 2
+  per_device_eval_batch_size: 2
+  gradient_accumulation_steps: 1
+
+  # Optimization (same as full config)
+  learning_rate: 5.0e-4
+  weight_decay: 0.1
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_epsilon: 1.0e-8
+  max_grad_norm: 1.0
+
+  # Learning rate schedule
+  lr_scheduler_type: "cosine"
+  warmup_steps: 5  # Very short warmup
+  warmup_ratio: 0.0
+
+  # Mixed precision
+  fp16: false
+  bf16: true
+  fp16_full_eval: false
+
+  # Memory optimization
+  gradient_checkpointing: false  # Disabled for speed in testing
+  optim: "adamw_torch"
+
+  # Evaluation and saving - FREQUENT FOR TESTING
+  eval_strategy: "steps"
+  eval_steps: 10  # Evaluate every 10 steps
+  save_strategy: "steps"
+  save_steps: 10  # Save every 10 steps
+  save_total_limit: 2
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_loss"
+  greater_is_better: false
+
+  # Logging - FREQUENT FOR TESTING
+  logging_steps: 5  # Log every 5 steps
+  logging_first_step: true
+  report_to:
+    - "tensorboard"
+
+  # Distributed training
+  ddp_backend: "nccl"
+  ddp_find_unused_parameters: false
+
+  # Reproducibility
+  seed: 42
+  data_seed: 42
+
+  # Other
+  remove_unused_columns: false
+  label_names:
+    - "labels"
+  include_inputs_for_metrics: false
+
+  # Resume training
+  resume_from_checkpoint: null
+
+  # Early stopping
+  early_stopping_patience: 0  # Disabled for testing
+  early_stopping_threshold: 0.0
+
+# Weights & Biases Configuration
+wandb:
+  project: "mamba-test"
+  entity: null
+  name: null
+  tags:
+    - "test"
+  notes: "Quick test run"
+  log_model: false
+  watch_model: false
+
+# Experiment Flags
+use_wandb: false  # Disabled for testing
+train_from_scratch: true
