@@ -1,0 +1,152 @@
+# MAMBA-130M Local Parquet Production Training Configuration
+# Optimized for 2x RTX 3090 (96GB total VRAM)
+# Training on local parquet files: data/train.parquet (~7.46M examples)
+
+# Model Architecture Configuration
+model:
+  # Core architecture (matches state-spaces/mamba-130m-hf)
+  d_model: 768  # hidden_size
+  n_layer: 24
+  vocab_size: 50280
+
+  # State Space Model (SSM) parameters
+  d_state: 16  # SSM state expansion factor
+  d_conv: 4    # Local convolution width
+  expand: 2    # Block expansion factor (d_inner = expand * d_model = 1536)
+
+  # Time step parameters
+  dt_rank: "auto"  # "auto" = math.ceil(d_model / 16) = 48
+
+  # Initialization and numerical stability
+  conv_bias: true
+  bias: false
+  use_fast_path: true
+
+  # Critical for training stability
+  residual_in_fp32: true
+  fused_add_norm: true
+  rms_norm: true
+
+  # Special tokens
+  pad_token_id: 0
+  bos_token_id: 0
+  eos_token_id: 0
+
+  # Training
+  initializer_range: 0.02
+  tie_word_embeddings: false
+
+# Dataset Configuration
+data:
+  dataset_name: "Salesforce/wikitext"  # Not used for local training
+  dataset_config: "wikitext-103-raw-v1"  # Not used for local training
+
+  # Preprocessing
+  max_seq_length: 2048  # Full context length
+  preprocessing_num_workers: 8  # Utilize CPU cores
+
+  # Data loading
+  train_batch_size: 32
+  eval_batch_size: 32
+  dataloader_num_workers: 8  # Parallel data loading
+
+  # Tokenization
+  tokenizer_name: "state-spaces/mamba-130m-hf"
+
+  # Caching
+  cache_dir: null
+  overwrite_cache: false
+
+# Training Configuration - OPTIMIZED FOR 96GB VRAM
+training:
+  # Output and logging
+  output_dir: "./outputs/mamba-130m-local-production"
+  run_name: "mamba-130m-local-production"
+  logging_dir: "./logs/mamba-130m-local-production"
+
+  # Training duration
+  num_train_epochs: 3
+  max_steps: -1  # -1 means use num_train_epochs
+
+  # Batch size and accumulation - OPTIMIZED FOR 2x RTX 3090
+  per_device_train_batch_size: 32  # 32 per GPU = 64 total
+  per_device_eval_batch_size: 32
+  gradient_accumulation_steps: 2  # Effective batch size = 128
+
+  # Optimization
+  learning_rate: 5.0e-4  # 5e-4 is standard for MAMBA
+  weight_decay: 0.1
+  adam_beta1: 0.9
+  adam_beta2: 0.95
+  adam_epsilon: 1.0e-8
+  max_grad_norm: 1.0
+
+  # Learning rate schedule
+  lr_scheduler_type: "cosine"
+  warmup_steps: 2000  # ~2% of total steps for good convergence
+  warmup_ratio: 0.0
+
+  # Mixed precision - BF16 for RTX 3090
+  fp16: false
+  bf16: true  # RTX 3090 supports BF16
+  fp16_full_eval: false
+
+  # Memory optimization
+  gradient_checkpointing: false  # Disabled - we have enough VRAM
+  optim: "adamw_torch"  # Can also try "adamw_torch_fused" for speed
+
+  # Evaluation and saving
+  eval_strategy: "steps"
+  eval_steps: 500  # Evaluate every 500 steps
+  save_strategy: "steps"
+  save_steps: 1000  # Save every 1000 steps
+  save_total_limit: 5  # Keep last 5 checkpoints
+  load_best_model_at_end: true
+  metric_for_best_model: "eval_loss"
+  greater_is_better: false
+
+  # Logging
+  logging_steps: 50  # Log every 50 steps
+  logging_first_step: true
+  report_to:
+    - "tensorboard"
+    - "wandb"  # Enable if use_wandb is true
+
+  # Distributed training - OPTIMIZED FOR 2 GPUs
+  ddp_backend: "nccl"
+  ddp_find_unused_parameters: false
+
+  # Reproducibility
+  seed: 42
+  data_seed: 42
+
+  # Other
+  remove_unused_columns: false
+  label_names:
+    - "labels"
+  include_inputs_for_metrics: false
+
+  # Resume training
+  resume_from_checkpoint: null
+
+  # Early stopping
+  early_stopping_patience: 5  # Stop if no improvement for 5 eval cycles
+  early_stopping_threshold: 0.001
+
+# Weights & Biases Configuration
+wandb:
+  project: "mamba-local-parquet-production"
+  entity: null  # Set to your W&B username or team
+  name: "mamba-130m-7.46M-examples"
+  tags:
+    - "mamba"
+    - "local-parquet"
+    - "language-modeling"
+    - "production"
+  notes: "Training MAMBA-130M from scratch on 7.46M local examples (2x RTX 3090)"
+  log_model: true
+  watch_model: false
+
+# Experiment Flags
+use_wandb: true  # Enable W&B logging for production
+train_from_scratch: true  # Train from random initialization
